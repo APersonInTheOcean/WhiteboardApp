@@ -1,0 +1,31 @@
+{
+  "name": "whiteboardapp",
+  "version": "1.0.0",
+  "description": "",
+  "main": "src/main.js",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --win nsis"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "devDependencies": {
+    "electron": "^44.7.0",
+    "electron-builder": "^26.15.3"
+  },
+  "build": {
+    "appId": "com.carlo.whiteboardapp",
+    "productName": "Whiteboard App",
+    "win": {
+      "icon": "resources/icon.ico"
+    },
+    "extraResources": [
+    {
+      "from": "resources/icon.ico",
+      "to": "icon.ico"
+    }
+    ]
+  }
+}
