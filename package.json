@@ -10,7 +10,10 @@
     "dist:linux": "electron-builder --linux deb"
   },
   "keywords": [],
-  "author": "",
+  "author": {
+    "name": "Carlo",
+    "email": "darkspeedster20@gmail.com"
+  },
   "license": "ISC",
   "type": "commonjs",
   "devDependencies": {
