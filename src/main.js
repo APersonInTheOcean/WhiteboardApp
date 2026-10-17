@@ -31,6 +31,7 @@ app.whenReady().then(() => {
 	app.setName('Whiteboard App');
 	if (process.platform === 'win32') {
 		app.setAppUserModelId('com.carlo.whiteboardapp');
+		app.setLoginItemSettings({openAtLogin:true});/// TEST THIS IDK IF WORKS
 		
 	}
 

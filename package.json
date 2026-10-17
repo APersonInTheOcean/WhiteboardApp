@@ -3,9 +3,11 @@
   "version": "1.0.0",
   "description": "",
   "main": "src/main.js",
+  "desktopName": "Whiteboard App",
   "scripts": {
     "start": "electron .",
-    "dist": "electron-builder --win nsis"
+    "dist": "electron-builder --win nsis",
+    "dist:linux": "electron-builder --linux deb"
   },
   "keywords": [],
   "author": "",
@@ -20,6 +22,11 @@
     "productName": "Whiteboard App",
     "win": {
       "icon": "resources/icon.ico"
+    },
+    "linux": {
+      "icon": "resources/icon.png",
+      "category": "Utility",
+      "syncDesktopName": true
     },
     "extraResources": [
     {
