@@ -32,38 +32,9 @@ function createWindow() {
 	return win;
 }
 
-app.whenReady().then(() => {
-	app.setName('Whiteboard App');
-	if (process.platform === 'win32') {
-		app.setAppUserModelId('com.carlo.whiteboardapp');
-		app.setLoginItemSettings({openAtLogin:true});/// TEST THIS IDK IF WORKS
-		
-	}
-	if (process.platform === 'linux' && app.isPackaged) {
-	const autostartDir = path.join(app.getPath('home'), '.config', 'autostart');
-	const executable = app.getPath('exe').replaceAll('\\', '\\\\').replaceAll('"', '\\"');
+function createTray(){
 
-	fs.mkdirSync(autostartDir, { recursive: true }); // makes the directory for the autostart folder
-	fs.writeFileSync( //creates a desktop app shortcut
-		path.join(autostartDir, 'whiteboardapp.desktop'),
-			`[Desktop Entry]
-			Type=Application
-			Name=Whiteboard App
-			Exec="${executable}"
-			X-GNOME-Autostart-enabled=true
-			`
-	);
-	}
-
-  
-
-  
-  app.on('window-all-closed', () => {
 	
-  });
-  
-
-
 	let win = null;
 	tray = new Tray(path.join(__dirname, '../resources/icon.png'));
 	tray.addListener('click',() => {
@@ -79,37 +50,76 @@ app.whenReady().then(() => {
 		win.focus();
 		}
 	})
-  const contextMenu = Menu.buildFromTemplate([
-	{
-	  label: 'Open App',
-	  click: () => {
-		if (!win || win.isDestroyed()) {
-		  win = createWindow();
-		} 
-		else {
-		  if (win.isMinimized()) win.restore();
-		  win.show();
-		  win.focus();
+	const contextMenu = Menu.buildFromTemplate([
+		{
+		label: 'Open App',
+		click: () => {
+			if (!win || win.isDestroyed()) {
+			win = createWindow();
+			} 
+			else {
+			if (win.isMinimized()) win.restore();
+			win.show();
+			win.focus();
+			}
 		}
-	  }
-	},
-	{
-	  label: 'Minimize',
-	  click: () => {
-		if (win && !win.isDestroyed()) {
-		  win.close();
+		},
+		{
+		label: 'Minimize',
+		click: () => {
+			if (win && !win.isDestroyed()) {
+			win.close();
+			}
 		}
-	  }
-	},
-	{
-	  label: 'Quit',
-	  click: () => {
-		app.quit();
-	  }
-	}
-  ]);
+		},
+		{
+		label: 'Quit',
+		click: () => {
+			app.quit();
+		}
+		}
+	]);
 
-  tray.setToolTip('Whiteboard App');
-  tray.setContextMenu(contextMenu);
+	tray.setToolTip('Whiteboard App');
+	tray.setContextMenu(contextMenu);
+}
+
+app.whenReady().then(() => {
+	app.setName('Whiteboard App');
+	if (process.platform === 'win32') {
+		app.setAppUserModelId('com.carlo.whiteboardapp');
+		app.setLoginItemSettings({openAtLogin:true});/// TEST THIS IDK IF WORKS
+		createTray();
+		
+	}
+	if (process.platform === 'linux' && app.isPackaged) {
+		const autostartDir = path.join(app.getPath('home'), '.config', 'autostart');
+		const executable = app.getPath('exe').replaceAll('\\', '\\\\').replaceAll('"', '\\"');
+
+		fs.mkdirSync(autostartDir, { recursive: true }); // makes the directory for the autostart folder
+		fs.writeFileSync( //creates a desktop app shortcut
+			path.join(autostartDir, 'whiteboardapp.desktop'),
+				`[Desktop Entry]
+				Type=Application
+				Name=Whiteboard App
+				Exec="${executable}"
+				X-GNOME-Autostart-enabled=true
+				`
+		);
+		setTimeout(createTray, 3000);
+
+
+	}
+
+  
+
+  
+	app.on('window-all-closed', () => {
+		
+	});
+  
+
+
+	
 
 });
