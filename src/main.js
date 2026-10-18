@@ -2,6 +2,8 @@ const { app, Tray, Menu, BrowserWindow } = require('electron');
 const path = require('node:path');
 let tray = null;
 
+
+
 function createWindow() {
 	const win = new BrowserWindow({
 		width: 800,
@@ -22,7 +24,9 @@ function createWindow() {
 			relaunchDisplayName: 'Whiteboard App'
 		});
 	}
-	
+	// win.webContents.openDevTools({ mode: "detach" });
+
+
 	win.loadFile(path.join(__dirname, 'index.html')   );
 	return win;
 }

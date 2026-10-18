@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html style="width: 100%; height: 100%;">
 
 <head>
 	<meta charset="UTF-8" />
@@ -8,39 +8,273 @@
 
 	<body 
 	style="
-	margin:0;
-	width: 100vw;
-	height: 100vh;
-	overflow: hidden;
+		margin:0;
+		overflow: hidden;
+		width: 100%;
+		height: 100%;
 	">
 
-		<div id="frame" 
-		style="
-		padding: min(10px,2%);
-		width: 100%;
-      	height: 100%;
-		border-radius: 1%;
-		box-sizing: border-box;
-		-webkit-app-region: drag;
-		background-color: #1d1d20;
-		">
-		<canvas 
-		id="board" 
-		style="
-			display: block;
-			height: 100%;
-			width: 100%;
-			border-radius: 1%;
-			background-color:#2b2b30; 
-			-webkit-app-region:no-drag;
-			cursor: url('../resources/pen.png') 0 24, crosshair;
+		<div id="frame" style="
+			position: relative;
 			box-sizing: border-box;
+			width: 100%;
+			height: 100%;
+			padding: min(10px, 2%);
+			background: #1d1d20;
+			-webkit-app-region: drag;
+		">
+			<div id="board-area" style="
+				position: relative;
+				width: 100%;
+				height: 100%;
+			">
+				<canvas id="board" style="
+					display: block;
+					width: 100%;
+					height: 100%;
+					border-radius: 1%;
+					position: absolute;
+					inset: 0;
+					z-index: 1;
+					background: transparent;
+					-webkit-app-region: no-drag;
+					cursor: url('../resources/pen.png') 0 24, crosshair;
+				"></canvas>
+				<canvas id="background" style="
+					inset: 0;
+					position: absolute;
+					display: block;
+					width: 100%;
+					height: 100%;
+					border-radius: 1%;
+					background: #2b2b30;
+					-webkit-app-region: no-drag;
+				"></canvas>
 
-		"
-		></canvas>
+				<div id="html-layer" style="
+					position: absolute;
+					inset: 0;
+					z-index: 1;
+					pointer-events: none;
+					-webkit-app-region: no-drag;
+					">
+						<div id="eraser-cursor" style="
+						position: absolute;
+						display: none;
+						width: 30px;
+						height: 30px;
+						box-sizing: border-box;
+						border-radius: 50%;
+						transform: translate(-50%, -50%);
+						pointer-events: none;
+						z-index: 2;
+						">
+						<img src="../resources/erasercursor.png" alt="" style="display: block;
+						width: 100%;
+						height: 100%;"
+						>
+						</div>
 
-		<script src="index.js"></script>
-		
+					
+						<div role="toolbar" style="
+							position: absolute;
+							left: 50%;
+							bottom: 12px;
+							transform: translateX(-50%);
+							display: flex;
+							align-items: center;
+							border-radius: 8px;
+							padding: 4px;
+							gap: 8px;
+							pointer-events: auto;
+							background: #1d1d20;
+						">
+						
+						<div class="marker-wrap">
+							<button class= "active" id="markerbutton" type="button" onclick="onMarkerClick(event)" aria-label="Marker">
+								<img src="../resources/marker.svg" alt="" width="30" height="30">
+							</button>
+
+							<div class="marker-popover">
+								<input id="brush-size" onchange="onMarkerClick(event)" type="range" min="1" max="10" value="3">
+								<button class="color" onclick="setBrushColor('#00ff00')">
+									<div style="
+									padding: 10px;
+									background-color: #00ff00;
+									border-radius: 15%;
+									">
+
+									</div>
+								</button>
+								<button class="color" onclick="setBrushColor('#ff1100')">
+									<div style="
+									padding: 10px;
+									background-color: #ff1100;
+									border-radius: 15%;
+									">
+
+									</div>
+								</button>
+								<button class="color" onclick="setBrushColor('#0026ff')">
+									<div style="
+									padding: 10px;
+									background-color: #0026ff;
+									border-radius: 15%;
+									">
+
+									</div>
+								</button>
+								<button class="color" onclick="setBrushColor('#eeff00')">
+									<div style="
+									padding: 10px;
+									background-color: #eeff00;
+									border-radius: 15%;
+									">
+
+									</div>
+								</button>
+								<button class="color" onclick="setBrushColor('#ff00c8')">
+									<div style="
+									padding: 10px;
+									background-color: #ff00c8;
+									border-radius: 15%;
+									">
+
+									</div>
+								</button>
+								<button type="button" onclick="toggleColorButtons();this.style.filter === 'grayscale(1)' ? this.style.filter = 'none' : this.style.filter ='grayscale(1)'; getComputedStyle(document.getElementById('brush-size')).display === 'flex' ? document.getElementById('brush-size').style.display = 'none' : document.getElementById('brush-size').style.display = 'flex'">
+									<img src="../resources/colorwheel.svg" alt="" width="20" height="20"> 
+								</button>
+							</div>
+						</div>
+						<div class="eraser-wrap">
+							<button id="eraserbutton" type="button" onclick="onEraserClick(event)" aria-label="Eraser">
+								<img src="../resources/eraser.svg" alt="" width="30" height="30">
+							</button>
+
+							<div class="eraser-popover">
+								<input id="eraser-size" type="range" min="10" max="200" value="100">
+							</div>
+						</div>
+						<style>
+								button {
+									appearance: none;
+									background: #1d1d20;
+									border: 0;
+									border-radius: 20%;
+									transition: background-color 200ms ease, outline-color 200ms ease;
+								}
+								button.active,
+								button:hover {
+									background: #262627;
+									outline: 2px solid 1d1d20;
+								}
+
+								.marker-popover::after {
+								content: "";
+								position: absolute;
+								top: 100%;
+								left: -12px;
+								width: calc(100% + 24px);
+								height: 8px;
+								}
+								.marker-wrap {
+									position: relative;
+								}
+
+								.marker-popover {
+									position: absolute;
+									left: 50%;
+									bottom: calc(100% + 8px);
+									transform: translateX(-50%);
+									display: flex;
+									align-items: center;
+									gap: 8px;
+									padding: 8px;
+									border-radius: 8px;
+									background: #1d1d20;
+									opacity: 0;
+									visibility: hidden;
+									pointer-events: none;
+									transition: opacity 180ms ease, visibility 0s ease 180ms;
+								}
+
+								.marker-wrap:hover .marker-popover,
+								.marker-wrap:focus-within .marker-popover,
+								.marker-popover:hover {
+								opacity: 1;
+								visibility: visible;
+								pointer-events: auto;
+								transition-delay: 0s;
+								}
+
+								.marker-popover input[type="range"] {
+									width: 100px;
+									accent-color: #9292927c;
+									display: flex;
+								}
+								.marker-popover button {
+								display: flex;
+								align-items: center;
+								justify-content: center;
+								padding: 0;
+								width: 30px;
+								height: 30px;
+								}
+								
+								.marker-popover .color {
+									display: none;
+
+								}
+								.eraser-popover::after {
+								content: "";
+								position: absolute;
+								top: 100%;
+								left: -12px;
+								width: calc(100% + 24px);
+								height: 8px;
+								}
+								.eraser-wrap {
+									position: relative;
+								}
+
+								.eraser-popover {
+									position: absolute;
+									left: 50%;
+									bottom: calc(100% + 8px);
+									transform: translateX(-50%);
+									display: flex;
+									align-items: center;
+									gap: 8px;
+									padding: 8px;
+									border-radius: 8px;
+									background: #1d1d20;
+									opacity: 0;
+									visibility: hidden;
+									pointer-events: none;
+									transition: opacity 180ms ease, visibility 0s ease 180ms;
+								}
+
+
+								.eraser-wrap:focus-within:hover .eraser-popover {
+									opacity: 1;
+									visibility: visible;
+									pointer-events: auto;
+									transition-delay: 0s;
+								}
+
+								.eraser-popover input[type="range"] {
+									width: 100px;
+									accent-color: #9292927c;
+									display: flex;
+								}
+							</style>
+					</div>
+					
+				</div>
+			</div>
+
+			<script src="index.js"></script>
 		</div>
 
 		
