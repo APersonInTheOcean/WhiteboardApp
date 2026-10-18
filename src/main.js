@@ -1,5 +1,6 @@
 const { app, Tray, Menu, BrowserWindow } = require('electron');
 const path = require('node:path');
+const fs = require('node:fs');
 let tray = null;
 
 
@@ -37,6 +38,21 @@ app.whenReady().then(() => {
 		app.setAppUserModelId('com.carlo.whiteboardapp');
 		app.setLoginItemSettings({openAtLogin:true});/// TEST THIS IDK IF WORKS
 		
+	}
+	if (process.platform === 'linux' && app.isPackaged) {
+	const autostartDir = path.join(app.getPath('home'), '.config', 'autostart');
+	const executable = app.getPath('exe').replaceAll('\\', '\\\\').replaceAll('"', '\\"');
+
+	fs.mkdirSync(autostartDir, { recursive: true }); // makes the directory for the autostart folder
+	fs.writeFileSync( //creates a desktop app shortcut
+		path.join(autostartDir, 'whiteboardapp.desktop'),
+			`[Desktop Entry]
+			Type=Application
+			Name=Whiteboard App
+			Exec="${executable}"
+			X-GNOME-Autostart-enabled=true
+			`
+	);
 	}
 
   
