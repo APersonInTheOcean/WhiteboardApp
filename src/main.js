@@ -39,7 +39,7 @@ app.whenReady().then(() => {
 		
 	}
 
-  let win = createWindow();
+  
 
   
   app.on('window-all-closed', () => {
@@ -48,18 +48,21 @@ app.whenReady().then(() => {
   
 
 
-
-  tray = new Tray(path.join(__dirname, '../resources/icon.png'));
-  tray.addListener('click',() => {
-	if (!win || win.isDestroyed()) {
-	  win = createWindow();
-	} 
-	else {
-	  if (win.isMinimized()) win.restore();
-	  win.show();
-	  win.focus();
-	}
-  })
+	let win = null;
+	tray = new Tray(path.join(__dirname, '../resources/icon.png'));
+	tray.addListener('click',() => {
+		if (!win || win.isDestroyed()) {
+		win = createWindow();
+		} 
+		else if (win && !win.isDestroyed()) {
+			win.close();
+		}
+		else {
+		if (win.isMinimized()) win.restore();
+		win.show();
+		win.focus();
+		}
+	})
   const contextMenu = Menu.buildFromTemplate([
 	{
 	  label: 'Open App',
