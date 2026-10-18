@@ -36,7 +36,11 @@ function createTray(){
 
 	
 	let win = null;
-	tray = new Tray(path.join(__dirname, '../resources/icon.png'));
+	const trayIcon = app.isPackaged
+		? path.join(process.resourcesPath, 'icon.png')
+		: path.join(__dirname, '../resources/icon.png');
+
+	tray = new Tray(trayIcon);
 	tray.addListener('click',() => {
 		if (!win || win.isDestroyed()) {
 		win = createWindow();
@@ -89,7 +93,6 @@ app.whenReady().then(() => {
 	if (process.platform === 'win32') {
 		app.setAppUserModelId('com.carlo.whiteboardapp');
 		app.setLoginItemSettings({openAtLogin:true});/// TEST THIS IDK IF WORKS
-		createTray();
 		
 	}
 	if (process.platform === 'linux' && app.isPackaged) {
@@ -106,7 +109,6 @@ app.whenReady().then(() => {
 				X-GNOME-Autostart-enabled=true
 				`
 		);
-		setTimeout(createTray, 3000);
 
 
 	}
@@ -117,6 +119,8 @@ app.whenReady().then(() => {
 	app.on('window-all-closed', () => {
 		
 	});
+	createTray();
+
   
 
 
