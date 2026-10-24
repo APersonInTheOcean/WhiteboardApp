@@ -1,4 +1,5 @@
 const { app, Tray, Menu, BrowserWindow } = require('electron');
+const { autoUpdater } = require('electron-updater');
 const path = require('node:path');
 const fs = require('node:fs');
 let tray = null;
@@ -111,6 +112,13 @@ app.whenReady().then(() => {
 		);
 
 
+	}
+	if (app.isPackaged) {
+		autoUpdater.on('error', (error) => {
+			console.error('Auto-update failed:', error);
+		});
+
+		autoUpdater.checkForUpdatesAndNotify();
 	}
 
   

@@ -7,7 +7,7 @@
   "scripts": {
     "start": "electron .",
     "dist": "electron-builder --win nsis",
-    "dist:linux": "electron-builder --linux deb"
+    "dist:linux": "electron-builder --linux AppImage"
   },
   "keywords": [],
   "author": {
@@ -32,14 +32,24 @@
       "syncDesktopName": true
     },
     "extraResources": [
-    {
-      "from": "resources/icon.ico",
-      "to": "icon.ico"
-    },
-    { 
-      "from": "resources/icon.png", 
-      "to": "icon.png" 
-    }
+      {
+        "from": "resources/icon.ico",
+        "to": "icon.ico"
+      },
+      {
+        "from": "resources/icon.png",
+        "to": "icon.png"
+      }
     ]
+  },
+  "dependencies": {
+    "electron-updater": "^6.8.11"
+  },
+  "publish": [
+  {
+    "provider": "github",
+    "owner": "APersonInTheOcean",
+    "repo": "WhiteboardApp"
   }
+]
 }

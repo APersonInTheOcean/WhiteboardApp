@@ -3,8 +3,7 @@ const brushSizeElement = document.getElementById('brush-size');
 const eraserSizeElement = document.getElementById('eraser-size');
 
 const ctx = canvas.getContext('2d');
-const backgroundCanvas = document.getElementById('background');
-const backgroundCtx = backgroundCanvas.getContext('2d');
+const backgroundGrid = document.getElementById('background');
 const eraserCursor = document.getElementById('eraser-cursor');
 console.log("hello world")
 
@@ -17,40 +16,32 @@ let erasing = false;
 let color = '#ffffff';
 
 class Stroke {
-  constructor(point1,point2, color, width,erasing) {
+  constructor(point1,point2, color, width,erasing, segment) {
     this.point1 = point1;
     this.point2 = point2;
     this.color = color;
     this.width = width;
     this.erasing = erasing;
+    this.segment = segment;
   }
 }
 let strokes = [];
 
 
-function drawBackground() {
+function updateBackgroundGrid() {
     const rect = canvas.getBoundingClientRect();
-    const gap = 30;
+    const gap = 50 * scale;
+    const radius = 3 * scale;
+    const originX = rect.width / 2 + displacement[0];
+    const originY = rect.height / 2 + displacement[1];
 
-    const left = (-rect.width / 2 - displacement[0]) / scale;
-    const right = (rect.width / 2 - displacement[0]) / scale;
-    const top = (-rect.height / 2 - displacement[1]) / scale;
-    const bottom = (rect.height / 2 - displacement[1]) / scale;
-
-    const firstX = Math.ceil(left / gap) * gap; // gets the interval of pixels per points then multiplys it back to avoid shitty decimal shenanigans
-    const firstY = Math.ceil(top / gap) * gap;
-    for (let x = firstX; x <= right; x += gap) {
-        for (let y = firstY; y <= bottom; y += gap) {
-        backgroundCtx.beginPath();
-        backgroundCtx.moveTo(x, y);
-        backgroundCtx.lineTo(x, y + 1);
-        backgroundCtx.strokeStyle = "#34343a";
-        backgroundCtx.lineWidth = 4;
-        backgroundCtx.lineCap = "round";
-        backgroundCtx.stroke();
-        }
-    }
+    backgroundGrid.style.backgroundImage =
+        `radial-gradient(circle ${radius}px at 50% 50%, #34343a 98%, transparent 100%)`;
+    backgroundGrid.style.backgroundSize = `${gap}px ${gap}px`;
+    backgroundGrid.style.backgroundPosition =
+        `${originX - gap / 2}px ${originY - gap / 2}px`;
 }
+
 function getCanvasPointFromWindowPoint(x,y) { // basically a canvas-relative coordinate system converter from window relative
     const rect = canvas.getBoundingClientRect();
     return [
@@ -58,15 +49,17 @@ function getCanvasPointFromWindowPoint(x,y) { // basically a canvas-relative coo
         (y - rect.top - rect.height / 2 - displacement[1]) / scale
     ]; // rect.top is canvas distance from the top of the window and rect.left is the distance of of the canvas from the left side of the window
 }
+
+
 function renderCanvas() {
     const rect = canvas.getBoundingClientRect();
     const pixelWidth = Math.floor(rect.width * window.devicePixelRatio);
     const pixelHeight = Math.floor(rect.height * window.devicePixelRatio);
 
-    backgroundCanvas.width = pixelWidth;
-    backgroundCanvas.height = pixelHeight;
-    canvas.width = pixelWidth;
-    canvas.height = pixelHeight;
+     if (canvas.width !== pixelWidth || canvas.height !== pixelHeight) {
+        canvas.width = pixelWidth;
+        canvas.height = pixelHeight;
+    }
 
     const transform = [
         window.devicePixelRatio * scale, 0,
@@ -75,23 +68,86 @@ function renderCanvas() {
         (rect.height / 2 + displacement[1]) * window.devicePixelRatio
     ];
 
-    backgroundCtx.setTransform(...transform);
-    ctx.setTransform(...transform); // translation
-    drawBackground();
-    strokes.forEach((stroke) => {
-        ctx.globalCompositeOperation = stroke.erasing // bullshit erasing magic, makes the pixels this stroke touches invisible
-        ? "destination-out"
-        : "source-over";
+    ctx.setTransform(1, 0, 0, 1, 0, 0); // reset all rotation translation and scaling incase width or height hasnt changed
+    ctx.clearRect(0, 0, canvas.width, canvas.height); 
+    ctx.setTransform(...transform);
+
+    updateBackgroundGrid();
+
+
+    
+    let currentGroup = null;
+    let currentPoints = [];
+
+    function strokeGroup() {
+        if (!currentGroup) return;
 
         ctx.beginPath();
-        ctx.moveTo(stroke.point1[0], stroke.point1[1]);
-        ctx.lineTo(stroke.point2[0], stroke.point2[1]);
-        ctx.strokeStyle = stroke.color;
-        ctx.lineWidth = stroke.width;
-        ctx.lineCap = "round";
+        ctx.moveTo(currentPoints[0][0], currentPoints[0][1]);
+
+        for (let i = 1; i < currentPoints.length - 1; i++) {
+            const midpoint = [
+                (currentPoints[i][0] + currentPoints[i + 1][0]) / 2,
+                (currentPoints[i][1] + currentPoints[i + 1][1]) / 2
+            ];
+
+            ctx.quadraticCurveTo(
+                currentPoints[i][0],
+                currentPoints[i][1],
+                midpoint[0],
+                midpoint[1]
+            );
+        }
+
+        const lastPoint = currentPoints[currentPoints.length - 1];
+        ctx.lineTo(lastPoint[0], lastPoint[1]);
+
+        ctx.globalCompositeOperation = currentGroup.erasing
+            ? 'destination-out'
+            : 'source-over';
+        ctx.strokeStyle = currentGroup.color;
+        ctx.lineWidth = currentGroup.width;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
         ctx.stroke();
+    }
+
+    strokes.forEach((stroke) => {
+        const startsNewPath =
+            !currentGroup ||
+            stroke.segment !== currentGroup.segment ||
+            stroke.color !== currentGroup.color ||
+            stroke.width !== currentGroup.width ||
+            stroke.erasing !== currentGroup.erasing;
+
+        if (startsNewPath) {
+            strokeGroup();
+
+            currentGroup = {
+                segment: stroke.segment,
+                color: stroke.color,
+                width: stroke.width,
+                erasing: stroke.erasing
+            };
+
+            currentPoints = [stroke.point1];
+        }
+
+        currentPoints.push(stroke.point2);
     });
+    strokeGroup();
     ctx.globalCompositeOperation = "source-over"; // turns off the bullshit magic
+}
+let renderScheduled = false;
+
+function scheduleRenderCanvas() {
+    if (renderScheduled) return;
+
+    renderScheduled = true;
+    requestAnimationFrame(() => {
+        renderScheduled = false;
+        renderCanvas();
+    });
 }
 function onMarkerClick(e){
     erasing = false;
@@ -118,6 +174,8 @@ function toggleColorButtons() {
     });
 }
 function renderCursor(e){
+
+    
     if (erasing){
         canvas.style.cursor = dragging ? "grab":"none";
         const rect = canvas.getBoundingClientRect();
@@ -128,6 +186,24 @@ function renderCursor(e){
         eraserCursor.style.top = `${e.clientY - rect.top}px`;
         eraserCursor.style.display = 'block';
     }
+    else {
+        canvas.style.cursor = dragging ? "grab":"crosshair";
+
+    }
+
+}
+function undo(howMany){
+
+    
+    for (var i = 0;i < howMany; i++) {
+        stroke = strokes.pop();
+        while (stroke.segment == strokes.at(-1)?.segment){
+            stroke = strokes.pop()
+        }
+
+    }
+    renderCanvas();
+
 }
 
 renderCanvas();
@@ -136,22 +212,17 @@ renderCanvas();
 let lastPointPos;
 let dragging;
 let dragPos;
+let segment = 0;
 
 window.addEventListener('resize', renderCanvas);
 
 
 canvas.addEventListener('pointerdown', (e) => {
-    if (erasing){
-        renderCursor(e);
-    }
-    else {
-        eraserCursor.style.display = "none";
-
-    }
-    if (e.button === 1) {
+    if (e.button === 1 || e.button === 2 ) {
         dragging = true;
         dragPos = [e.clientX,e.clientY];
-        canvas.style.cursor = "grabbing";
+        renderCursor(e);
+
         return;
     }
     if (e.button === 0) {
@@ -159,61 +230,54 @@ canvas.addEventListener('pointerdown', (e) => {
         const pos = getCanvasPointFromWindowPoint(e.clientX,e.clientY)
         ctx.globalCompositeOperation = erasing ? "destination-out" : "source-over";
         drawing = true;
-        ctx.beginPath();
-        ctx.moveTo(pos[0], pos[1]);
-        ctx.lineTo(pos[0] + 1, pos[1]);
-        ctx.strokeStyle = color;
-        ctx.lineWidth = erasing ? eraserSizeElement.value : brushSizeElement.value;
-        ctx.lineCap = 'round';
-        ctx.stroke();
+        
         strokes.push(new Stroke(
             [pos[0], pos[1]],
-            [pos[0] + 1, pos[1]],
+            [pos[0], pos[1]],
             color,
-            brushSizeElement.value,erasing
+            ctx.lineWidth = erasing ? eraserSizeElement.value : brushSizeElement.value,
+            erasing,
+            segment
         ));
-        ctx.beginPath();
-        ctx.moveTo(pos[0], pos[1]);
-        lastPointPos = [pos[0], pos[1]];
+        lastPointPos = pos;
+        renderCanvas();
+
+        
     }
+    renderCursor(e);
     
 
 });
 
 canvas.addEventListener('pointermove', (e) => {
-    if (erasing){
-        renderCursor(e);
-    }
-    else {
-        eraserCursor.style.display = 'none';
-        
-    }
-    if (drawing) {
-        const pos = getCanvasPointFromWindowPoint(e.clientX,e.clientY)
-        ctx.globalCompositeOperation = erasing ? "destination-out" : "source-over";
-        ctx.lineTo(pos[0], pos[1]);
-        strokes.push(new Stroke(
-            lastPointPos,
-            [pos[0], pos[1]],
-            color,        
-            ctx.lineWidth = erasing ? eraserSizeElement.value : brushSizeElement.value,
-            erasing
-        ));
-        lastPointPos = [pos[0], pos[1]];
-        
+    renderCursor(e);
 
-        ctx.strokeStyle = color;
-        ctx.lineWidth = erasing ? eraserSizeElement.value : brushSizeElement.value;
-        ctx.lineCap = 'round';
-        ctx.stroke();
+    if (drawing) {
+        const events = e.getCoalescedEvents?.() ?? [e]; // collected individual mouse movements 
+        const width = erasing ? eraserSizeElement.value : brushSizeElement.value;
+
+        for (const event of events) {
+            const pos = getCanvasPointFromWindowPoint(event.clientX, event.clientY);
+
+            strokes.push(new Stroke(
+                lastPointPos,
+                pos,
+                color,
+                width,
+                erasing,
+                segment
+            ));
+
+            lastPointPos = pos;
+        }
     }
     else if (dragging) {
         
         displacement[0] +=  e.clientX - dragPos[0]; // sets the displacement from last mouse movement
         displacement[1] +=  e.clientY - dragPos[1];
         dragPos = [e.clientX, e.clientY]; //sets the last movement to be this one since it just moved
-        renderCanvas();
     }
+    scheduleRenderCanvas();
     
     
     
@@ -227,7 +291,7 @@ canvas.addEventListener("wheel", (e) => {
 
   // Change zoom, then clamp it.
   scale *= e.deltaY < 0 ? 1.1 : 1 / 1.1;
-  scale = Math.min(5, Math.max(0.2, scale));
+  scale = Math.min(5, Math.max(0.1, scale));
 
   const cursorX = e.clientX - rect.left - rect.width / 2;
   const cursorY = e.clientY - rect.top - rect.height / 2;
@@ -240,13 +304,36 @@ canvas.addEventListener("wheel", (e) => {
 }, { passive: false });
 
 canvas.addEventListener('pointerup', () => {
+    if (drawing){
+       segment++;
+    }
     drawing = false;
     dragging = false;
     canvas.style.cursor = dragging ? "grab": erasing ? "none": "crosshair" ;
+    
 });
 
 canvas.addEventListener('pointerleave', () => {
+    if (drawing){
+        segment++;
+    }
     drawing = false;
+    
     eraserCursor.style.display = 'none';
 
+
+});
+let undoing = false; // Prevent undoing multiple times
+window.addEventListener('keydown', (e) => {
+    if (e.ctrlKey && e.code === 'KeyZ') {
+        e.preventDefault(); // Stop the browser's default undo.
+        undoing = true;
+        undo(1);
+    }
+});
+window.addEventListener('keyup', (e) => {
+    if (e.ctrlKey || e.code === 'KeyZ') {
+        undoing = false;
+        e.preventDefault(); // Prevents the page from scrolling.
+    }
 });
